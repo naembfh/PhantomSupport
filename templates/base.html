@@ -1,63 +1,55 @@
 {% load static tailwind_tags %}
 <!DOCTYPE html>
 <html lang="en">
-	<head>
+  <head>
     <title>Django Tailwind</title>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta http-equiv="X-UA-Compatible" content="ie=edge">
-		{% tailwind_css %}
-	</head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    {% tailwind_css %}
+  </head>
+  <body>
+    <div class="flex items-center justify-center min-h-screen bg-gray-100">
+      <div class="card bg-neutral text-neutral-content w-96 shadow-lg">
+        <div class="card-body">
+          <h2 class="card-title text-center mb-4">Join Room</h2>
 
-    <body>
+          <form method="POST" action="">
+            <!-- CSRF token to prevent security issues -->
+            {% csrf_token %}
 
-        <h1>PhantomSupport Chat</h1>
-    
-        <!-- Messages Display -->
-        <div id="chat-messages"></div>
-    
-        <!-- Message Input -->
-        <input id="chat-message-input" type="text" />
-        <button id="chat-message-submit">Send</button>
-    
-        <script>
-            // WebSocket connection setup
-            const chatSocket = new WebSocket('ws://127.0.0.1:8000/ws/chat/');
-    
-            // Log when WebSocket connection is opened
-            chatSocket.onopen = function (event) {
-                console.log("WebSocket connection established.");
-            };
-    
-            // Log received messages from the WebSocket
-            chatSocket.onmessage = function (event) {
-                const data = JSON.parse(event.data);
-                console.log("Message received: ", data.message);
-    
-                // Display the received message in the chat
-                const chatMessages = document.getElementById('chat-messages');
-                const messageElement = document.createElement('div');
-                messageElement.textContent = data.message;
-                chatMessages.appendChild(messageElement);
-            };
-    
-            // Log WebSocket connection closure
-            chatSocket.onclose = function (event) {
-                console.log("WebSocket connection closed.");
-            };
-    
-            // Send message on button click
-            document.getElementById('chat-message-submit').onclick = function () {
-                const messageInput = document.getElementById('chat-message-input');
-                const message = messageInput.value;
-    
-                // Send the message through WebSocket
-                chatSocket.send(JSON.stringify({
-                    'message': message
-                }));
-    
-                messageInput.value = ''; // Clear the input field after sending
-            };
-        </script>
-    </body>
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text text-neutral-content">Username</span>
+              </label>
+              <input
+                type="text"
+                name="username"
+                placeholder="Enter username"
+                class="input input-bordered w-full"
+                required
+              />
+            </div>
+
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text text-neutral-content">Roomname</span>
+              </label>
+              <input
+                type="text"
+                name="room"
+                placeholder="Enter room name"
+                class="input input-bordered w-full"
+                required
+              />
+            </div>
+
+            <div class="form-control">
+              <button type="submit" class="btn btn-primary w-full">Submit</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>

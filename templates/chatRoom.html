@@ -1,0 +1,141 @@
+{% load static tailwind_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Django Tailwind Chat</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    {% tailwind_css %}
+</head>
+<body>
+    <div class="flex items-center justify-center min-h-screen bg-gray-100">
+        <div class="card bg-neutral text-neutral-content w-80 md:w-96 lg:w-1/2 shadow-lg">
+            <div class="card-body">
+                <div id="chatContainer" class="overflow-y-auto max-h-96 space-y-4">
+                    {% for message in messages %}
+                        {% if message.sender == user %}
+                            <div class="chat chat-end">
+                                <div class="chat-image avatar">
+                                    <div class="w-12 h-12 rounded-full">
+                                        <img alt="User Avatar" src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+                                    </div>
+                                </div>
+                                <div class="chat-header">
+                                    {{ message.sender }}
+                                    <time class="text-xs opacity-50">{{ message.timestamp|date:"H:i" }}</time>
+                                </div>
+                                <div class="chat-bubble chat-bubble-info">{{ message.message }}</div>
+                                <div class="chat-footer opacity-50">Delivered</div>
+                            </div>
+                        {% else %}
+                            <div class="chat chat-start">
+                                <div class="chat-image avatar">
+                                    <div class="w-12 h-12 rounded-full">
+                                        <img alt="Other User Avatar" src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+                                    </div>
+                                </div>
+                                <div class="chat-header">
+                                    {{ message.sender }}
+                                    <time class="text-xs opacity-50">{{ message.timestamp|date:"H:i" }}</time>
+                                </div>
+                                <div class="chat-bubble {% cycle 'chat-bubble-primary' 'chat-bubble-secondary' 'chat-bubble-accent' %}">
+                                    {{ message.message }}
+                                </div>
+                                <div class="chat-footer opacity-50">Seen at {{ message.timestamp|date:"H:i" }}</div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <form id="message-form" method="POST" action="" class="mt-4 flex space-x-2">
+                    {% csrf_token %}
+                    <input 
+                        type="text" 
+                        name="message" 
+                        placeholder="Type your message" 
+                        class="input input-bordered w-full"
+                        required 
+                        id="msg"
+                    />
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        const websocketProtocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const wsEndpoint = `${websocketProtocol}://${window.location.host}/ws/chat/{{room_name}}/`;
+
+        const socket = new WebSocket(wsEndpoint);
+
+        socket.onopen = (event) => {
+            console.log("WebSocket connection opened!");
+        };
+
+        socket.onclose = (event) => {
+            console.log("WebSocket connection closed!");
+        };
+
+        document.getElementById('message-form').addEventListener('submit', function(event){
+            event.preventDefault();
+            const message = document.getElementById('msg').value;
+            if (message.trim()) {
+                socket.send(
+                    JSON.stringify({
+                        'message': message,
+                        'room_name': '{{room_name}}',
+                        'sender': '{{user}}',
+                    })
+                );
+                document.getElementById('msg').value = '';
+            }
+        });
+
+        socket.addEventListener('message', function(event) {
+            const data = JSON.parse(event.data);
+            console.log(data);
+            const message = data.message.message || "No message";
+            const sender = data.message.sender || "Unknown";
+            const timestamp = new Date(data.message.timestamp);
+            const time = isNaN(timestamp.getTime()) ? "Invalid Time" : timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            const messageContainer = document.getElementById('chatContainer');
+            const newMessage = document.createElement('div');
+            newMessage.classList.add('chat', sender === '{{user}}' ? 'chat-end' : 'chat-start');
+
+            newMessage.innerHTML = `
+                <div class="chat-image avatar">
+                    <div class="w-12 h-12 rounded-full">
+                        <img alt="${sender} Avatar" src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+                    </div>
+                </div>
+                <div class="chat-header">
+                    ${sender}
+                    <time class="text-xs opacity-50">${time}</time>
+                </div>
+                <div class="chat-bubble ${sender === '{{user}}' ? 'chat-bubble-info' : 'chat-bubble-secondary'}">${message}</div>
+                <div class="chat-footer opacity-50">${sender === '{{user}}' ? 'Delivered' : 'Seen at ' + time}</div>
+            `;
+
+            messageContainer.appendChild(newMessage);
+            scrollToBottom();
+        });
+
+        function scrollToBottom() {
+            var chatContainer = document.getElementById('chatContainer');
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        let bubbleClasses = ['chat-bubble-primary', 'chat-bubble-secondary', 'chat-bubble-accent'];
+        let currentBubbleIndex = 0;
+
+        function cycleMessageBubbleClass() {
+            const bubbleClass = bubbleClasses[currentBubbleIndex];
+            currentBubbleIndex = (currentBubbleIndex + 1) % bubbleClasses.length;
+            return bubbleClass;
+        }
+
+        window.onload = scrollToBottom;
+    </script>
+</body>
+</html>
